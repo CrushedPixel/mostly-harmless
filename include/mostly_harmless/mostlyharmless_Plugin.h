@@ -105,6 +105,7 @@ namespace mostly_harmless {
         clap_process_status process(const clap_process* processContext) noexcept override;
         /// @private
         void paramsFlush(const clap_input_events* in, const clap_output_events* out) noexcept override;
+
     protected:
         /**
             Retrieves a parameter by its param id was constructed with.
@@ -163,6 +164,10 @@ namespace mostly_harmless {
          */
         void handleEvent(const clap_event_header_t* event) noexcept;
 
+        [[nodiscard]] bool guiCreate(const char* api, bool isFloating) noexcept override;
+
+        void guiDestroy() noexcept override;
+
     private:
         void handleGuiEvents(const clap_output_events_t* outputQueue) noexcept;
 
@@ -185,8 +190,6 @@ namespace mostly_harmless {
 
         [[nodiscard]] bool implementsGui() const noexcept override;
         [[nodiscard]] bool guiIsApiSupported(const char* api, bool isFloating) noexcept override;
-        [[nodiscard]] bool guiCreate(const char* api, bool isFloating) noexcept override;
-        void guiDestroy() noexcept override;
         [[nodiscard]] bool guiSetParent(const clap_window* window) noexcept override;
         [[nodiscard]] bool guiSetScale(double scale) noexcept override;
         [[nodiscard]] bool guiCanResize() const noexcept override;
@@ -195,11 +198,13 @@ namespace mostly_harmless {
         [[nodiscard]] bool guiGetSize(std::uint32_t* width, std::uint32_t* height) noexcept override;
 
 
-    private:
+    protected:
         std::vector<Parameter<SampleType>> m_indexedParams;
+        std::unique_ptr<gui::IEditor> m_editor{ nullptr };
+
+    private:
         std::unordered_map<clap_id, Parameter<SampleType>*> m_idParams;
         utils::Timer m_guiDispatchThread;
-        std::unique_ptr<gui::IEditor> m_editor{ nullptr };
 
     protected:
         /**
