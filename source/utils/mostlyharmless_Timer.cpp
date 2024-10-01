@@ -12,7 +12,9 @@ namespace mostly_harmless::utils {
         if (!action) return;
         auto weakThis = weak_from_this();
         auto threadAction = [weakThis, intervalMs]() -> void {
-            auto startPoint = std::chrono::steady_clock::now();
+            auto startPoint = std::chrono::steady_clock::now()
+                              // don't wait before executing the first time
+                              - std::chrono::milliseconds(intervalMs);
             while (true) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
