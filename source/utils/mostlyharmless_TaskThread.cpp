@@ -11,10 +11,14 @@ namespace mostly_harmless::utils {
             assert(false);
             return;
         }
-        auto actionWrapper = [this]() -> void {
-            m_isThreadRunning.store(true);
-            action();
-            m_isThreadRunning.store(false);
+
+        auto weakThis = weak_from_this();
+        auto actionWrapper = [weakThis]() -> void {
+            if (auto self = weakThis.lock()) {
+                self->m_isThreadRunning.store(true);
+                self->action();
+                self->m_isThreadRunning.store(false);
+            }
         };
         m_threadShouldExit = false;
         std::thread worker{ std::move(actionWrapper) };
@@ -24,7 +28,8 @@ namespace mostly_harmless::utils {
     void TaskThread::sleep() {
         m_canWakeUp = false;
         std::unique_lock<std::mutex> lock(m_mutex);
-        m_conditionVariable.wait(lock, [this]() -> bool { return m_canWakeUp; });
+        auto weakThis = weak_from_this();
+        m_conditionVariable.wait(lock, [weakThis]() -> bool { if (auto self = weakThis.lock()) return self->m_canWakeUp; else return true; });
     }
 
     void TaskThread::wake() {
