@@ -204,7 +204,7 @@ namespace mostly_harmless {
 
     private:
         std::unordered_map<clap_id, Parameter<SampleType>*> m_idParams;
-        utils::Timer m_guiDispatchThread;
+        std::shared_ptr<utils::Timer> m_guiDispatchThread = utils::Timer::create();
 
     protected:
         /**
