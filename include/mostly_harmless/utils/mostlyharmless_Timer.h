@@ -10,6 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <functional>
+#include <iostream>
 
 namespace mostly_harmless::utils {
 
@@ -19,7 +20,7 @@ namespace mostly_harmless::utils {
             explicit Private() = default;
         };
 
-        std::atomic<bool> running{ false };
+        std::string name;
         std::atomic<bool> stopRequested{ false };
         std::unique_ptr<std::thread> timerThread;
         std::mutex mutex;
@@ -30,21 +31,24 @@ namespace mostly_harmless::utils {
                 {
                     std::unique_lock<std::mutex> lock(mutex);
                     if (cv.wait_for(lock, interval, [this] { return stopRequested.load(std::memory_order_relaxed); })) {
+                        std::cout << name << " cv signal received" << std::endl;
                         break;
                     }
                 }
                 if (action) {
+                    std::cout << name << " EXECUTING " << std::endl;
                     action();
                 }
             }
-            running.store(false, std::memory_order_relaxed);
+
+            std::cout << name << " exited timer loop" << std::endl;
         }
 
     public:
-        explicit Timer(Private) {}
+        explicit Timer(Private, std::string name) : name(std::move(name)) {}
 
-        static std::shared_ptr<Timer> create() {
-            return std::make_shared<Timer>(Private());
+        static std::shared_ptr<Timer> create(std::string name) {
+            return std::make_shared<Timer>(Private(), std::move(name));
         }
 
         ~Timer() noexcept {
@@ -54,8 +58,7 @@ namespace mostly_harmless::utils {
         void run(int intervalMs) {
             if (!action) return;
             stop();
-            running.store(true, std::memory_order_relaxed);
-            stopRequested.store(false, std::memory_order_relaxed);
+            stopRequested.store(false);
             timerThread = std::make_unique<std::thread>(&Timer::timerLoop, this, std::chrono::milliseconds(intervalMs));
         }
 
@@ -64,16 +67,15 @@ namespace mostly_harmless::utils {
         }
 
         void stop() {
-            stopRequested.store(true, std::memory_order_relaxed);
-            cv.notify_all();
+            std::cout << name << " Timer::stop" << std::endl;
             if (timerThread) {
+                std::cout << name << "Timer::stop pre join" << std::endl;
+                stopRequested.store(true);
+                cv.notify_all();
                 timerThread->join();
+                std::cout << name << "Timer::stop post join" << std::endl;
                 timerThread.reset();
             }
-        }
-
-        [[nodiscard]] bool isTimerRunning() const noexcept {
-            return running.load(std::memory_order_relaxed);
         }
 
         std::function<void(void)> action{ nullptr };
