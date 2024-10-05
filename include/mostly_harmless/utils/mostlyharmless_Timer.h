@@ -31,17 +31,13 @@ namespace mostly_harmless::utils {
                 {
                     std::unique_lock<std::mutex> lock(mutex);
                     if (cv.wait_for(lock, interval, [this] { return stopRequested.load(std::memory_order_relaxed); })) {
-                        std::cout << name << " cv signal received" << std::endl;
                         break;
                     }
                 }
                 if (action) {
-                    std::cout << name << " EXECUTING " << std::endl;
                     action();
                 }
             }
-
-            std::cout << name << " exited timer loop" << std::endl;
         }
 
     public:
@@ -67,15 +63,12 @@ namespace mostly_harmless::utils {
         }
 
         void stop() {
-            std::cout << name << " Timer::stop" << std::endl;
-            if (timerThread) {
-                std::cout << name << "Timer::stop pre join" << std::endl;
-                stopRequested.store(true);
-                cv.notify_all();
-                timerThread->join();
-                std::cout << name << "Timer::stop post join" << std::endl;
-                timerThread.reset();
-            }
+            if (!timerThread) return;
+            
+            stopRequested.store(true);
+            cv.notify_all();
+            timerThread->join();
+            timerThread.reset();
         }
 
         std::function<void(void)> action{ nullptr };
