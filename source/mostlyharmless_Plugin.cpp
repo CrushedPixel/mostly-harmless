@@ -399,6 +399,7 @@ namespace mostly_harmless {
 
         m_editor = createEditor();
         m_editor->initialise({ .guiToProcQueue = &m_guiToProcQueue, .requestParamFlush = std::move(requestFlushCallback) });
+        m_procToGuiQueue.emptyQueue();
         m_guiDispatchThread->run(1);
         return true;
     }
